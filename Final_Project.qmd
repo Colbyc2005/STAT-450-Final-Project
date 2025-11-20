@@ -1,0 +1,22 @@
+---
+title: "Final Project"
+author: "Caleb Coffelt"
+format: 
+   html:
+      self-contained: true
+editor: visual
+execute: 
+  warning: FALSE
+  message: FALSE
+---
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(leaflet)
+library(janitor)
+library(stringr)
+
+housing_data <- read_csv("housing_data.csv")
+```
