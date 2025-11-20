@@ -1,0 +1,9 @@
+---
+title: "Test Doc"
+format: html
+---
+
+```{r}
+housing_data <- read_csv("~/Documents/STAT 450/housing_data.csv")
+```
+
