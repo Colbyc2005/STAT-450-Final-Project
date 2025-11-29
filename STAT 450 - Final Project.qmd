@@ -2,4 +2,113 @@
 title: "STAT 450 - Final Project"
 author: "Harman Singh"
 format: html
+execute:
+  warning: false
+  message: false
 ---
+
+
+
+```{r}
+library(readxl)
+house_prices <- read_excel("C:/Users/harma/Downloads/STAT450-HousePrices.xlsx")
+View(STAT450_HousePrices)
+```
+
+
+```{r}
+library(tidyverse)
+library(janitor)
+```
+
+## Cleaning up data
+```{r}
+house_prices <- house_prices |>
+  clean_names()
+```
+
+## Date cleaning
+```{r}
+class(house_prices$mon_yr)
+## Date already in Date Format
+
+house_prices <- house_prices |>
+  mutate(
+    mon_yr = ymd(house_prices$mon_yr),
+    year = year(mon_yr),
+    month = month(mon_yr, label = TRUE)
+  )
+```
+
+## Comparative Analysis
+```{r}
+house_prices |>
+  mutate(across(
+    c(so_cal, s_f_bay_area, central_coast, far_north, inland_empire, 
+      central_valley, la_metro),
+    ~ as.numeric(.)
+  )) |>
+  group_by(year) |>
+  summarise(
+    Sf_Price = mean(s_f_bay_area, na.rm = TRUE),
+    Central_Coast_Price = mean(central_coast, na.rm = TRUE),
+    North_Price = mean(far_north, na.rm = TRUE),
+    Inland_Empire_Price = mean(inland_empire, na.rm = TRUE),
+    Central_Valley_Price = mean(central_valley, na.rm = TRUE),
+    LA_Metro_Price = mean(la_metro, na.rm = TRUE),
+    SoCal_Price = mean(so_cal, na.rm = TRUE)
+    ) |>
+  pivot_longer(
+    cols = -year,
+    names_to = "Region",
+    values_to = "Price"
+  ) |>
+  ggplot(aes(y=Price, x = year, color = Region)) +
+  geom_line() +
+  labs(
+    title = "California Regional Prices over The Years",
+    y = "Price in USD($)",
+    x = "Year"
+  )
+  
+
+```
+## Interpretation
+----
+
+
+## Price Changes from 2020 to 2025
+```{r}
+Counties_Pivot <- house_prices |>
+  select(!c("mon_yr","month","ca","s_f_bay_area", "central_coast",
+  "far_north","inland_empire", "central_valley","x56","condo", "la_metro", "so_cal")) |> 
+  mutate(across(!year, ~ as.numeric(.))) |>
+  group_by(year) |>
+  summarise(across(where(is.numeric), ~ mean(.x, na.rm = TRUE))) |>
+  pivot_longer(
+    cols = -year,
+    names_to = "Counties",
+    values_to = "Price") 
+  
+
+
+Counties_Pivot |>
+  filter(year == c(2020,2025)) |>
+  pivot_wider(
+    names_from = year,
+    values_from = Price,
+    names_glue = "Price_{year}"
+  ) |>
+  mutate(Price_Change = (Price_2025 - Price_2020) / Price_2020 * 100) |>
+  arrange(desc(Price_Change)) |>
+  ggplot(aes(x=Price_Change, y = Counties)) +
+  geom_col()
+
+
+
+
+
+```
+
+
+
