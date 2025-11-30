@@ -1,0 +1,174 @@
+---
+title: "STAT 450: Final Project"
+author: "Colby Carlson"
+format: 
+   html:
+      self-contained: true
+---
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(timeDate)
+```
+
+```{r}
+housing_data <- read_csv("~/Downloads/STAT450_HousePrices.csv")
+```
+
+```{r}
+# Fixing column names
+housing = housing_data |>
+  clean_names()
+```
+
+```{r}
+housing_la_county = housing |>
+  mutate(year = year(mon_yr),
+         month = month(mon_yr),
+         day = day(mon_yr)) |>
+  select(year, month, day, los_angeles)
+
+housing_alameda_county = housing |>
+  mutate(year = year(mon_yr),
+         month = month(mon_yr),
+         day = day(mon_yr)) |>
+  select(year, month, day, alameda)
+
+housing_ca = housing |>
+  mutate(year = year(mon_yr),
+         month = month(mon_yr),
+         day = day(mon_yr)) |>
+  select(year, month, day, ca)
+
+housing_ca_la = housing |>
+  mutate(year = year(mon_yr),
+         month = month(mon_yr),
+         day = day(mon_yr)) |>
+  select(mon_yr, year, month, day, ca, los_angeles) |>
+  pivot_longer(
+    cols = c("ca", "los_angeles"),
+    names_to = "county",
+    values_to = "price"
+  )
+
+housing_al_la = housing |>
+  mutate(year = year(mon_yr),
+         month = month(mon_yr),
+         day = day(mon_yr)) |>
+  select(mon_yr, year, month, day, los_angeles, alameda) |>
+  pivot_longer(
+    cols = c("alameda", "los_angeles"),
+    names_to = "county",
+    values_to = "price"
+  )
+
+housing_al_ca = housing |>
+  mutate(year = year(mon_yr),
+         month = month(mon_yr),
+         day = day(mon_yr)) |>
+  select(mon_yr, year, month, day, ca, alameda) |>
+  pivot_longer(
+    cols = c("alameda", "ca"),
+    names_to = "county",
+    values_to = "price"
+  )
+```
+
+```{r}
+housing_la_county |>
+  distinct(year, .keep_all = TRUE) |>
+  ggplot(aes(x = year, y = los_angeles)) +
+  geom_col(fill = "steelblue") +
+  labs(
+    title = "Bar graph of median housing prices in Los Angeles County",
+    x = "Year",
+    y = "Price"
+  ) +
+  theme_classic()
+```
+
+
+```{r}
+housing_alameda_county |>
+  distinct(year, .keep_all = TRUE) |>  
+  ggplot(aes(x = year, y = alameda)) +
+  geom_col(fill = "steelblue") +
+  labs(
+    title = "Bar graph of median housing prices in Alameda County",
+    x = "Year",
+    y = "Price"
+  ) +
+  theme_classic()
+```
+
+```{r}
+housing_ca_la |>
+  ggplot(aes(x = year, y = price, color = county)) +
+  geom_point() +
+  facet_wrap(~county) +
+  labs(
+    x = "Year",
+    y = "Price"
+  ) +
+  theme_classic()
+```
+
+```{r}
+housing_al_la |>
+  ggplot(aes(x = year, y = price, color = county)) +
+  geom_point() +
+  facet_wrap(~county) +
+  labs(
+    x = "Year",
+    y = "Price"
+  ) +
+  theme_classic()
+```
+
+```{r}
+housing_al_ca |>
+  ggplot(aes(x = year, y = price, color = county)) +
+  geom_point() +
+  facet_wrap(~county) +
+  labs(
+    x = "Year",
+    y = "Price"
+  ) +
+  theme_classic()
+```
+
+```{r}
+housing_after_crash |>
+  distinct(year, .keep_all = TRUE) |>
+  ggplot(aes(x = year, y = los_angeles)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "tomato")
+```
+
+
+```{r}
+model = lm(los_angeles ~ year, data = housing_after_crash)
+predictions = data.frame(year = c(2026:2035))
+
+pred26_35 = predict(model, newdata = predictions)
+pred_df = data.frame(year = predictions$year, los_angeles = pred26_35)
+
+housing_after_crash |>
+  distinct(year, .keep_all = TRUE) |>
+  ggplot(aes(x = year, y = los_angeles)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "tomato") +
+  geom_point(data = pred_df, aes(x = year, y = los_angeles), color = "red") +
+  theme_classic()
+```
+
+```{r}
+housing_after_covid |>
+  ggplot(aes(x = year, y = butte))
+```
+
+```{r}
+ca_la_housing(aes(x = year))
+```
+
