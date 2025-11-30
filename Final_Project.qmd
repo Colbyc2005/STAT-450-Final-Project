@@ -17,6 +17,119 @@ library(readr)
 library(leaflet)
 library(janitor)
 library(stringr)
+library(tidyr)
+library(lubridate)
 
-housing_data <- read_csv("housing_data.csv")
+housing_data <- read_csv("STAT450_HousePrices.csv")
 ```
+
+```{r}
+housing_data_long <- housing_data |>
+  pivot_longer(
+    cols = -c("Mon-Yr", "CA"),
+    names_to = "County",
+    values_to = "Prices"
+  )
+```
+
+```{r}
+housing_data_long |>
+  group_by(County) |>
+  filter(County %in% c("San Francisco", "Sacramento")) |>
+  ggplot(aes(x = `Mon-Yr`, y = Prices, col = County)) +
+  geom_line() +
+  geom_smooth(span = 0.6, se = FALSE) +
+  labs(title = "Median House Prices in San Francisco vs Sacramento",
+       x = "Date",
+       y = "Median Price")
+```
+
+```{r}
+housing_data |>
+  ggplot(aes(x = `Mon-Yr`, y = `San Francisco`)) +
+  geom_line() +
+  geom_smooth(se = FALSE, span = 0.3) +
+  labs(title = "Median Housing Price in San Francisco",
+       x = "Data",
+       y = "Median Price")
+```
+
+```{r}
+housing_data |>
+  ggplot(aes(x = `Mon-Yr`, y = Sacramento)) +
+  geom_line() +
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+  labs(title = "Median Housing Prices of Sacramento County",
+       x = "Date",
+       y = "Median Price")
+```
+
+```{r}
+
+SF <- housing_data_long |>
+  filter(County == "San Francisco") |>
+  mutate(
+    year = year(`Mon-Yr`),
+    date = date(`Mon-Yr`),
+    month = month(`Mon-Yr`, label = TRUE),
+    wday = wday(`Mon-Yr`, label = TRUE)
+    )
+
+SC <- housing_data_long |>
+  filter(County == "Sacramento") |>
+  mutate(
+    year = year(`Mon-Yr`),
+    date = date(`Mon-Yr`),
+    month = month(`Mon-Yr`, label = TRUE),
+    wday = wday(`Mon-Yr`, label = TRUE)
+    )
+
+x1 <- SF$year
+y1 <- SF$Prices
+
+x2 <- SC$year
+y2 <- SC$Prices
+
+
+
+```
+
+```{r}
+
+reg <- glm(y1 ~ x1)
+
+plot(x1,y1,
+     main = "Scatterplot of Year vs Median Price for San Francisco",
+     xlab = "Year",
+     ylab = "Prices",
+     col = "blue")
+
+abline(reg, col = "red", lwd = 2)
+reg
+
+cor(x1,y1)
+```
+
+LSRL for San Francisco:
+
+$\widehat{Median Price} = -94533988 + 47528(Year)$
+
+```{r}
+options(scipen = 999)
+reg <- glm(y2 ~ x2)
+
+plot(x2,y2,
+     main = "Scatterplot of Year vs Median Price for Sacramento",
+     xlab = "Year",
+     ylab = "Prices",
+     col = "blue")
+
+abline(reg, col = "red", lwd = 2)
+reg
+
+cor(x2,y2)
+```
+
+LSRL for Sacramento:
+
+$\widehat{Median Price} = -22516747 + 11349(Year)$
