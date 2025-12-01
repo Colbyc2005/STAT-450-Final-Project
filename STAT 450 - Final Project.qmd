@@ -69,12 +69,25 @@ house_prices |>
     title = "California Regional Prices over The Years",
     y = "Price in USD($)",
     x = "Year"
-  )
+  ) +
+  theme_classic()
   
 
 ```
 ## Interpretation
 ----
+This graph is time series graph that represents the price changes between the major
+Californian housing regions which are 7 that are included in the Data. We can see
+that in the 1990s, the SF Bay Area and the LA Metro area were relative in price but
+as we approached the year 2000 there differed drastically is this is most likely
+due to the dotcom boom. Other interesting trent to see is how in between 2000 and 2010
+SF Bay Area was overtaken by Central Coast which is the only time we see this. 
+The prices drop in 2008 and that is due to the great recession but we see the increases 
+happened drastically for SF Bay Area which is due to the tech boom influenced by 
+the modern life changes we experience today. SF Bay Area still is drastically more 
+expensive that other areas. 
+
+
 
 
 ## Price Changes from 2020 to 2025
@@ -110,5 +123,29 @@ Counties_Pivot |>
 
 ```
 
+## 
+```{r}
+house_prices |>
+  select(alameda, santa_clara, year) |>
+  group_by(year) |>
+  filter(year >= 2004) |>
+  summarise(
+    Alameda_Price = mean(alameda),
+    Santa_clara_Price = mean(santa_clara)
+) |>
+  pivot_longer(
+    cols = -year,
+    names_to = "County",
+    values_to = "Price"
+  ) |>
+  ggplot(aes(y=Price, x = year, color = County)) +
+  geom_line() +
+  labs(
+    title = "Alameda vs Santa Clara County 2004 - Present",
+    y = "Price in USD($)",
+    x = "Year"
+  )
+  
+```
 
 
