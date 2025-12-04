@@ -192,9 +192,7 @@ Counties_Pivot |>
     names_glue = "Price_{year}"
   ) |>
   mutate(Price_Change = (Price_2025 - Price_2020) / Price_2020 * 100) |>
-  arrange(desc(Price_Change)) |>
-  ggplot(aes(x=Price_Change, y = Counties)) +
-  geom_col()
+  arrange(desc(Price_Change)) 
 ```
 
 ```{r}
