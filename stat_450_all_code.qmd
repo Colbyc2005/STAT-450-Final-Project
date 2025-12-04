@@ -1,0 +1,362 @@
+---
+title: "STAT 450: R Code for Final Project"
+author: "Colby Carlson, Harman Singh, Caleb Coffelt"
+format: 
+   html:
+      self-contained: true
+editor: visual
+execute: 
+  warning: FALSE
+  message: FALSE
+---
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(leaflet)
+library(janitor)
+library(stringr)
+library(tidyr)
+library(lubridate)
+library(ggthemes)
+
+housing_data <- read_csv("~/Downloads/STAT450_HousePrices.csv")
+```
+
+# Cleaning Column Names:
+
+```{r}
+housing = housing_data |>
+  clean_names()
+```
+
+# Testing for Duplicates & NA Values
+
+```{r}
+get_dupes(housing)
+total_na = sum(is.na(housing))
+
+total_na
+```
+
+# Data Cleaning:
+
+```{r}
+housing = housing |>
+  mutate(
+    mon_yr = ymd(mon_yr), 
+    year = year(mon_yr), 
+    month = month(mon_yr)
+  )
+
+# mon_yr combines month and year, to make our data more usable, we have created two new columns, one for the year and one for the month
+```
+
+## Research Question 1 Code:
+
+```{r}
+housing_data_long <- housing_data |>
+  pivot_longer(
+    cols = -c("Mon-Yr", "CA"),
+    names_to = "County",
+    values_to = "Prices"
+  )
+
+# pivot_longer creates two new columns, one for county and one for price, this reduces over 60 columns to 4 columns
+```
+
+```{r}
+housing_data_long |>
+  group_by(County) |>
+  filter(County %in% c("San Francisco", "Sacramento")) |>
+  ggplot(aes(x = `Mon-Yr`, y = Prices, col = County)) +
+  geom_line() +
+  geom_smooth(span = 0.6, se = FALSE) +
+  labs(title = "Median House Prices in San Francisco vs Sacramento",
+       x = "Date",
+       y = "Median Price")
+
+# First, we group by the county, then filter our data to only datapoints that are in either San Francisco or Sacramento.
+# After grouping and filtering, the graph is then created using geom_line() and the trend line is created using geom_smooth
+```
+
+## Research Question 2:
+
+```{r}
+housing_al_la = housing |>
+  # Select the columns to work with
+  select(year, month, los_angeles, alameda) |>
+  # pivot_longer so that the two counties are under one column and price is under one column
+  pivot_longer(
+    cols = c("alameda", "los_angeles"),
+    names_to = "county",
+    values_to = "price"
+  )
+```
+
+```{r}
+housing_al_la |>
+  filter(!is.na(price)) |>
+  # Creates plot for comparing Alameda County to Los Angeles County
+  ggplot(aes(x = year, y = price, color = county)) +
+  geom_point() +
+  facet_wrap(~county) +
+  labs(
+    x = "Year",
+    y = "Price"
+  ) +
+  theme_clean()
+```
+
+```{r}
+# Creating descriptive statistics for california regions
+housing_regions |>
+  filter(year == 2025) |>
+  filter(!is.na(price)) |>
+  group_by(region) |>
+  # Generating a table with a 5 number summary 
+  tbl_summary(
+    by = region,
+    statistic = list(
+      all_continuous() ~ "Min: {min} \n
+      Q1: {p25} \n 
+      Mean: {mean} \n 
+      Q3: {p75} \n 
+      Max: {max}"
+    )
+  )
+```
+
+# Research Question 3:
+
+```{r}
+housing |>
+  # Ensure that all region values are classified as numeric
+  mutate(across(
+    c(so_cal, s_f_bay_area, central_coast, far_north, inland_empire, 
+      central_valley, la_metro),
+    ~ as.numeric(.)
+  )) |> 
+  group_by(year) |>
+  # Calculate the mean price for each region
+  summarise(
+    Sf_Price = mean(s_f_bay_area, na.rm = TRUE),
+    Central_Coast_Price = mean(central_coast, na.rm = TRUE),
+    North_Price = mean(far_north, na.rm = TRUE),
+    Inland_Empire_Price = mean(inland_empire, na.rm = TRUE),
+    Central_Valley_Price = mean(central_valley, na.rm = TRUE),
+    LA_Metro_Price = mean(la_metro, na.rm = TRUE),
+    SoCal_Price = mean(so_cal, na.rm = TRUE)
+    ) |>
+  # Keep year & create a new column for region and another for price
+  pivot_longer(
+    cols = -year,
+    names_to = "Region",
+    values_to = "Price"
+  ) |>
+  # Creates plot for mean price of California Regions
+  ggplot(aes(y=Price, x = year, color = Region)) +
+  geom_line() +
+  labs(
+    title = "California Regional Prices over The Years",
+    y = "Price in USD($)",
+    x = "Year"
+  ) +
+  theme_classic()
+```
+
+# Other Visualizations or Analysis not Used:
+
+## Harman:
+
+## Price Changes from 2020 to 2025
+
+```{r}
+Counties_Pivot <- housing |>
+  select(!c("mon_yr","month","ca","s_f_bay_area", "central_coast",
+  "far_north","inland_empire", "central_valley","x56","condo", "la_metro", "so_cal")) |> 
+  mutate(across(!year, ~ as.numeric(.))) |>
+  group_by(year) |>
+  summarise(across(where(is.numeric), ~ mean(.x, na.rm = TRUE))) |>
+  pivot_longer(
+    cols = -year,
+    names_to = "Counties",
+    values_to = "Price") 
+
+Counties_Pivot |>
+  filter(year == c(2020,2025)) |>
+  pivot_wider(
+    names_from = year,
+    values_from = Price,
+    names_glue = "Price_{year}"
+  ) |>
+  mutate(Price_Change = (Price_2025 - Price_2020) / Price_2020 * 100) |>
+  arrange(desc(Price_Change)) |>
+  ggplot(aes(x=Price_Change, y = Counties)) +
+  geom_col()
+```
+
+```{r}
+housing |>
+  select(alameda, santa_clara, year) |>
+  group_by(year) |>
+  filter(year >= 2004) |>
+  summarise(
+    Alameda_Price = mean(alameda),
+    Santa_clara_Price = mean(santa_clara)
+) |>
+  pivot_longer(
+    cols = -year,
+    names_to = "County",
+    values_to = "Price"
+  ) |>
+  ggplot(aes(y=Price, x = year, color = County)) +
+  geom_line() +
+  labs(
+    title = "Alameda vs Santa Clara County 2004 - Present",
+    y = "Price in USD($)",
+    x = "Year"
+  )
+  
+```
+
+# Caleb:
+
+```{r}
+housing_data |>
+  ggplot(aes(x = `Mon-Yr`, y = `San Francisco`)) +
+  geom_line() +
+  geom_smooth(se = FALSE, span = 0.3) +
+  labs(title = "Median Housing Price in San Francisco",
+       x = "Data",
+       y = "Median Price")
+```
+
+```{r}
+housing_data |>
+  ggplot(aes(x = `Mon-Yr`, y = Sacramento)) +
+  geom_line() +
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+  labs(title = "Median Housing Prices of Sacramento County",
+       x = "Date",
+       y = "Median Price")
+```
+
+```{r}
+SF <- housing_data_long |>
+  filter(County == "San Francisco") |>
+  mutate(
+    year = year(`Mon-Yr`),
+    date = date(`Mon-Yr`),
+    month = month(`Mon-Yr`),
+    wday = wday(`Mon-Yr`)
+    )
+
+SC <- housing_data_long |>
+  filter(County == "Sacramento") |>
+  mutate(
+    year = year(`Mon-Yr`),
+    date = date(`Mon-Yr`),
+    month = month(`Mon-Yr`),
+    wday = wday(`Mon-Yr`)
+    )
+
+x1 <- SF$year
+y1 <- SF$Prices
+
+x2 <- SC$year
+y2 <- SC$Prices
+```
+
+```{r}
+reg <- glm(y1 ~ x1)
+
+plot(x1,y1,
+     main = "Scatterplot of Year vs Median Price for San Francisco",
+     xlab = "Year",
+     ylab = "Prices",
+     col = "blue")
+
+abline(reg, col = "red", lwd = 2)
+reg
+
+cor(x1,y1)
+```
+
+LSRL for San Francisco:
+
+$\widehat{Median Price} = -94533988 + 47528(Year)$
+
+```{r}
+options(scipen = 999)
+reg <- glm(y2 ~ x2)
+
+plot(x2,y2,
+     main = "Scatterplot of Year vs Median Price for Sacramento",
+     xlab = "Year",
+     ylab = "Prices",
+     col = "blue")
+
+abline(reg, col = "red", lwd = 2)
+reg
+
+cor(x2,y2)
+```
+
+LSRL for Sacramento:
+
+$\widehat{Median Price} = -22516747 + 11349(Year)$
+
+# Colby:
+
+```{r}
+housing_al_after_crash = housing |>
+  mutate(year = year(mon_yr),
+         month = month(mon_yr)) |>
+  select(year, month, alameda) |>
+  filter(year > 2007)
+```
+
+```{r}
+housing_la_after_crash = housing |>
+  mutate(year = year(mon_yr),
+         month = month(mon_yr)) |>
+  select(year, month, los_angeles) |>
+  filter(year > 2007)
+```
+
+```{r}
+housing_al_after_crash |>
+  distinct(year, .keep_all = TRUE) |>
+  ggplot(aes(x = year, y = alameda)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "tomato") +
+  theme_clean()
+
+cor(housing_al_after_crash$year, housing_al_after_crash$alameda)
+```
+
+```{r}
+housing_la_after_crash |>
+  distinct(year, .keep_all = TRUE) |>
+  ggplot(aes(x = year, y = los_angeles)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "tomato") +
+  theme_clean()
+
+cor(housing_la_after_crash$year, housing_la_after_crash$los_angeles)
+```
+
+```{r}
+al_model = lm(alameda ~ year, data = housing_al_after_crash)
+la_model = lm(los_angeles ~ year, data = housing_la_after_crash)
+
+predictions = data.frame(year = c(2026:2030))
+
+al_predictions = predict(al_model, newdata = predictions)
+la_predictions = predict(la_model, newdata = predictions)
+
+al_predictions
+la_predictions
+```
